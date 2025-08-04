@@ -1,20 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Check which page we are on and run the appropriate function
-    if (document.body.classList.contains('auth-page')) {
+    // Determine which page we're on and call the correct function
+    if (document.getElementById('signup-form')) {
         handleAuthPage();
-    } else if (document.body.classList.contains('restaurant-page')) {
-        handleRestaurantPage();
-    } else {
+    } else if (document.getElementById('restaurant-list')) {
         handleIndexPage();
+    } else if (document.getElementById('restaurant-name')) {
+        handleRestaurantPage();
     }
 });
 
 // --- Data Management (using localStorage) ---
 
-// Placeholder for our data. We'll use localStorage to save it.
+// Get data from localStorage or initialize with a default structure
 let appData = JSON.parse(localStorage.getItem('appData')) || {
     users: [],
-    restaurants: []
+    restaurants: [{
+        id: '1',
+        name: 'The Cozy Corner Cafe',
+        location: 'Downtown',
+        photos: ['https://via.placeholder.com/400x300.png?text=First+Image'],
+        reviews: []
+    }]
 };
 
 function saveData() {
@@ -32,86 +38,84 @@ function handleAuthPage() {
     const signupForm = document.getElementById('signup-form');
     const loginForm = document.getElementById('login-form');
 
-    showLoginLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        signupFormContainer.style.display = 'none';
-        loginFormContainer.style.display = 'block';
-    });
+    if (showLoginLink) {
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            signupFormContainer.style.display = 'none';
+            loginFormContainer.style.display = 'block';
+        });
+    }
 
-    showSignupLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        loginFormContainer.style.display = 'none';
-        signupFormContainer.style.display = 'block';
-    });
+    if (showSignupLink) {
+        showSignupLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginFormContainer.style.display = 'none';
+            signupFormContainer.style.display = 'block';
+        });
+    }
 
-    signupForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('signup-username').value;
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-        const accountType = document.getElementById('account-type').value;
+    if (signupForm) {
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('signup-username').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const accountType = document.getElementById('account-type').value;
 
-        // Check if username already exists
-        if (appData.users.some(user => user.username === username)) {
-            alert('Username already taken!');
-            return;
-        }
+            // Check if username already exists
+            if (appData.users.some(user => user.username === username)) {
+                alert('Username already taken!');
+                return;
+            }
 
-        const newUser = { username, email, password, accountType };
-        appData.users.push(newUser);
-        saveData();
-        alert(`Account created successfully for ${username}!`);
-        // Redirect to login form
-        showLoginLink.click();
-    });
+            const newUser = { username, email, password, accountType };
+            appData.users.push(newUser);
+            saveData();
+            alert(`Account created successfully for ${username}!`);
+            showLoginLink.click();
+        });
+    }
 
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('login-username').value;
-        const password = document.getElementById('login-password').value;
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
 
-        const user = appData.users.find(u => u.username === username && u.password === password);
+            const user = appData.users.find(u => u.username === username && u.password === password);
 
-        if (user) {
-            alert(`Welcome back, ${user.username}!`);
-            // Here you would set a session or token. For this example, we just store the logged-in user.
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            window.location.href = 'index.html'; // Redirect to the main page
-        } else {
-            alert('Invalid username or password.');
-        }
-    });
+            if (user) {
+                alert(`Welcome back, ${user.username}!`);
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                window.location.href = 'index.html';
+            } else {
+                alert('Invalid username or password.');
+            }
+        });
+    }
 }
 
 // --- Index Page Logic ---
 function handleIndexPage() {
     const restaurantList = document.getElementById('restaurant-list');
-
+    
     function renderRestaurantList() {
-        restaurantList.innerHTML = ''; // Clear existing cards
+        restaurantList.innerHTML = '';
         appData.restaurants.forEach(restaurant => {
             const card = document.createElement('a');
             card.href = `restaurant.html?id=${restaurant.id}`;
             card.classList.add('restaurant-card');
+
+            const averageRating = calculateAverageRating(restaurant.reviews);
+            const ratingText = averageRating > 0 ? `${averageRating.toFixed(1)} / 5` : 'No ratings yet';
+
             card.innerHTML = `
                 <h3>${restaurant.name}</h3>
                 <p>Location: ${restaurant.location}</p>
-                <p>Rating: ${calculateAverageRating(restaurant.reviews).toFixed(1)} / 5</p>
+                <p>Rating: ${ratingText}</p>
             `;
             restaurantList.appendChild(card);
         });
-    }
-
-    // A dummy restaurant for demonstration purposes
-    if (appData.restaurants.length === 0) {
-        appData.restaurants.push({
-            id: '1',
-            name: 'The Cozy Corner Cafe',
-            location: 'Downtown',
-            photos: [],
-            reviews: []
-        });
-        saveData();
     }
     
     renderRestaurantList();
@@ -167,7 +171,8 @@ function handleRestaurantPage() {
 
     function updateRatingsSummary() {
         const averageRating = calculateAverageRating(restaurant.reviews);
-        ratingsSummary.innerHTML = `<p><strong>Average Rating:</strong> ${averageRating.toFixed(1)} / 5 (${restaurant.reviews.length} reviews)</p>`;
+        const ratingText = averageRating > 0 ? `${averageRating.toFixed(1)} / 5` : 'No ratings yet';
+        ratingsSummary.innerHTML = `<p><strong>Average Rating:</strong> ${ratingText} (${restaurant.reviews.length} reviews)</p>`;
     }
 
     function calculateAverageRating(reviews) {
@@ -206,9 +211,9 @@ function handleRestaurantPage() {
         }
 
         const comment = document.getElementById('comment-input').value;
-        const rating = document.querySelector('input[name="rating"]:checked');
+        const ratingInput = document.querySelector('input[name="rating"]:checked');
 
-        if (!rating) {
+        if (!ratingInput) {
             alert('Please select a star rating.');
             return;
         }
@@ -216,7 +221,7 @@ function handleRestaurantPage() {
         const newReview = {
             username: currentUser.username,
             comment: comment,
-            rating: parseInt(rating.value)
+            rating: parseInt(ratingInput.value)
         };
 
         restaurant.reviews.push(newReview);
